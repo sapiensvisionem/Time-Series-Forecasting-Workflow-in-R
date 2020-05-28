@@ -15,4 +15,4 @@ Forecast time series data of various types (simple/multiple time series, cross s
   - RNN
   - Machine Learning models
   
-I will showcase two datasets from Kaggle competitions I participated: M5 Forecasting and Energy Prediction.
+I will showcase two datasets from Kaggle competitions I participated: M5 Forecasting and Energy Prediction. In addition, I will work with some financial data.
