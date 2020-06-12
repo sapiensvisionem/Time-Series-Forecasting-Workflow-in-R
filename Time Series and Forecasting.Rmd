@@ -7,64 +7,183 @@ output: html_document
 
 # Introduction
 
-The goal of this post is to show show workflow for forecasting time dependent data in R. The forecasting methodologies conducted in the post are on time series where data is sequential and have dependency structure. Sometimes we are more interested in having accurate forecast.
+The goal of this post is to show my workflow in forecasting time series data in R. Time series are almost ubiquitous and have the unique property in which data is sequential and have dependency structure.We are interested in making predictions about the future in many situations: deciding whether to build another power generation plant in the next ten years requires forecasts of future demand; scheduling staff in a call center next week requires forecasts of call volumes; stocking an inventory requires forecasts of stock requirements. Forecasts can be required several years in advance (for the case of capital investments), or only a few minutes beforehand (for telecommunication routing). Whatever the circumstances or time horizons involved, forecasting is an important aid to effective and efficient planning. 
 
-Forecasting involves making predictions about the future. It is required in many situations: deciding whether to build another power generation plant in the next ten years requires forecasts of future demand; scheduling staff in a call centre next week requires forecasts of call volumes; stocking an inventory requires forecasts of stock requirements. Forecasts can be required several years in advance (for the case of capital investments), or only a few minutes beforehand (for telecommunication routing). Whatever the circumstances or time horizons involved, forecasting is an important aid to effective and efficient planning. 
+# My Workflow
 
-Many of the methods were historically deveoped from 1960s and have analytical form (e.g. ARIMA), whereas the more recent methods (e.g. RNN) are using machine learning and neural network without precise analytical formula for estimators. 
+My workflow follows seven steps from examining data to making inferences based on the model fit. 
 
-# Workflow
+I. Examine the Structure of Data
 
-I. Time objects in R and Data Preprocessing
+  Understand a problem at hand, and determine whether my data is one of the three types.
+
+  - Univariate or Multiple Independent time series 
+  - Regression time series 
+  - Hierarchical time series
+  
+II. Preprocess Datetime Data
+
+  Conform a datetime column and extract useful features from it. I typically use lubridate. For importing regularly spaced time series, I use xts and transform into R's ts object.
 
   - Parsing and transforming time objects with lubridate
   - Reading time series with xts
 
-II. EDA and Visualization
+III. EDA and Visualization
 
-  - Location, Dispersion, and Distribution of Univariate time series
-  - Trend, Seasonality and Cycle
+  Analyze my variable(s) of interest. The way I tackle visualization depends on the structure of data. I always proceed with the visualizations below on any data structure.
+  
+  - Location, Dispersion, and Distribution 
+  - (Multiple) Line Chart: at every unit of date (year, month, day)
+  - Correlogram (only for multiple time series)
+  - Trend, Seasonality and Cycle of Time Series
   - Stationarity and Autocorrelogram
   
-III. Feature Engineering
+  For in-depth analysis and presentation purposes, I do the following visualizations.
+  
+  - Bar Chart: by day of week, by hour of day
+  - Slope Chart: How does today compare with the start of a time period?
+  - Cycle Chart: Are there cyclical patterns in data?
+  - Calendar Heatmap: How can I look up trends across two time dimensions? 
+  
+  In dealing with regression and hierarchical structure of data, I bolster the visualizations above using interactivity of library(plotly).
+  
+IV. Feature Engineering based on EDA
 
+  We have already done half of feature engineering work on datetime preprocessing. We also need to transform and engineer new variables based on insights from EDA.
+
+  - variance stabilizing transform
+  - smoothing
   - differencing
   - log differencing
   - seasonal differencing
 
-IV. Model Selection and Evaluation
+V. Models and Forecasting
+
+  Now that data are clean and ready for modeling, we use the following models. Data structures have their own different models. 
+
+  Univariate and Multiple Independent Time Series:
+  
+  - Simple Models (Naive, MA)
+  - Linear Regression
+  - Splines
+  - Exponential Smoothing
+  - ARIMA
+  - ARFIMA
+  - SARIMA
+  - GARCH
+  - Complex seasonalities
+  - VARIMA
+  - TBAT
+  - Neural network
+  - RNN
+  
+  Regression Time Series:
+  
+  - Linear Regression
+  - ARIMA
+  
+  Hierarchical Time Series:
+  
+  - Hierarchical Time Series
+  
+VI. Model Evaluation and Selection
 
   - Statistical models: AIC, hypothesis testing, graphical inspection
   - General models: time series cross validation
-
-V. Models
-
-  - Univariate time series -> can apply any models from A-J
-  - Univariate time series with exogenous variables -> can only apply B, K
-  - Multiple time series 
-  - Hierarchical time series
-  - Mulitple time series with exogenous variables
   
-  . Moving Average
-  . Linear Regression
-  . Splines
-  . Exponential Smoothing
-  . ARIMA
-  . ARFIMA
-  . SARIMA
-  . GARCH
-  . Complex seasonalities
-  . VARIMA
-  . TBAT
-  . Neural network
-  . RNN
-  . Machine Learning
+VII. Inference
 
- I have worked on both types of data, and one key difference seems to be that longitudinal data is often used in causal analyses, to understand the impact of interventions or treatments, whereas time series are often used in forecasting. Of course, the difference is not clear-cut (you need to understand the underlying drivers to forecast, and IMO you haven't understood the drivers unless you can forecast well). But people who do signal detection in time series often don't care so much about forecasting, so they would probably reject my distinction
- 
- 19
+  - Confidence Interval
 
-I doubt there are strict, formal definitions that a wide range of data analysts agree on.
+####  Import Relevant Libraries
+
+```{r message=FALSE}
+library(xts) # contains zoo, extensible time series, conversion to ts object
+library(TSA) # DirRec(), beersales data
+library(hms) # hms object
+library(fpp2) # conntains various data
+library(urca) # unit root test 
+library(vars) # vector autoregressions
+library(astsa) # applied statistical time series analysis; ARIMA models
+library(readr) # read csv file more efficiently
+library(fGarch) # garchFit()
+library(readxl) # read excel file
+library(tseries) # ADF and KPSS tests
+library(anytime) # POSIXct and Date converter
+library(ggplot2) # visualiztion, autoplot
+library(forecast) # forecast(), auto.arima(), ggseasonplot(), ggsubseriesplot(), gglagplot(), ggAcf, ggPcf datasets: gold, woolyrnq, gas
+library(fracdiff) # fractional ARIMA
+library(fasttime) # fasster parsing than lubridate, fastPOSIXct()
+library(tidyverse) # data manipulation
+library(lubridate) # date object parsing, extraction, rounding
+library(DataCombine) # slide()
+library(PerformanceAnalytics) # chart.TimeSeries()
+```
+
+# I. Data
+
+It is very important at the first step to see what is the objective of the study is and what kinds of data are given. Depending on the types of data given, we apply different models. 
+
+### 1. Univariate Time Series
+
+Univariate time series is one in which only one variable is observed repeatedly over time. If the goal is to predict multiple variables independently, then it can be classified as univariate time series because we can apply our analysis on each time series.
+
+1. Monthly Australian gas production 1956â€“1995 from Australian Bureau of Statistics.
+2. Monthly Beer Sales in millions of barrels, 01/1975 - 12/1990.
+3. Hourly traffic flow in Chicago
+```{r}
+#  monthly gas prices
+data(gas)
+# monthly gold production
+data(gold)
+#  . Beer Sales
+data(beersales)
+```
+
+### 2. Multivariate Time Series
+
+Multivariate time series is one in which exogenous variables are regressed with the main variable of interest. Once the variable of interest is chosen, we want to know its relationship to other variables. 
+
+1. Daily stock exchange returns from global stock exchanges
+2. Quarterly GDP and Unemployment Rate from 1955 to 1969 for United Kingdom
+3. Monthly Chicago mercantile exchange data; it contains seat prices from Chicago Mercantile Exchange. There are three classes of seats CME, IMM, and IOM which confer the rights to trade ifferent sets of commodities traded. CME seat owners can trade everything; IMM seat owners are allowed to trade everything except agricultural products; and seat owners are allowed to trade only in index products and all options. For each class of seat, we need to forecast time series of seat price for each month from January 2001 to December 2013 using trading volume.
+```{r}
+#  . Istanbul Stock Exchange
+stock_exchange <- read_csv('C:/Users/jihun/Downloads/time_series/istanbul_stock_exchange.csv')
+#  . US GDP and Unemployment Rate
+gdp <- read_excel('C:/Users/jihun/Downloads/time_series/UK_GDP_Unemployment.xlsx')
+#  . Chicago traffic flow
+# traffic  
+#  . CO2 Emission
+co2 <- read_csv('C:/Users/jihun/Downloads/time_series/CO2_emission.csv')
+#  . Chicago Mercantile Exchange 
+list <- read_list('C:/Users/jihun/Downloads/time_series/chicago_mercantile_exchange/')
+Contracts_Volume %>%
+  inner_join(Contracts_Classification) %>% 
+  inner_join(cmeS) %>% 
+  inner_join(immS) %>% 
+  inner_join(iomS)
+```
+
+### 3. Hierarchicagl Time Series
+
+Hierarchical time series is one in which variables can form hierarchical structure such as items and product categories that are themselves forming another higher category. We are interested in detecting aggregate effects as well as individual effects.
+
+1. Hourly Energy Data from IECS
+2. Daily Walmart Sales data from 
+```{r}
+#  . Energy Usage
+
+#  . Walmart Sales
+
+```
+
+
+### Difference between Time Series and Longitudinal Data
+
+Longitudinal data is one in which multiple similar units are gone through some treatment and observed over time. Usually there are many units and fewer observations across time. They receive a separate treatment.
+
+One key difference seems to be that longitudinal data is often used in causal analyses, to understand the impact of interventions or treatments, whereas time series are often used in forecasting. Of course, the difference is not clear-cut (you need to understand the underlying drivers to forecast, and IMO you haven't understood the drivers unless you can forecast well). But people who do signal detection in time series often don't care so much about forecasting, so they would probably reject my distinction.
 
 In general however, time series connotes a single study unit observed at regular intervals over a very long period of time. A prototypical example would be the annual GDP growth of a country over decades or even more than a hundred years. For an analyst working for a private company, it might be monthly sales revenues over the life of the company. Because there are so many observations, the data are analyzed in great detail, looking for things like seasonality over different periods (e.g., monthly: more sales at the beginning of a month just after people have been paid; yearly: more sales in November and December, when people are shopping for the Christmas season), and possibly regime shifts. Forecasting is often very important.
 
@@ -74,100 +193,127 @@ cross section: different subjects at the same time; think of it as one row with 
 time series: the same subject at different times; think of it as one column with rows corresponding to different time points;
 panel (longitudinal): many subjects at different times, you have the same subject at different times, and you have many subjects at the same time; think of it as a table where rows are time points, and columns are subjects.
 
-####  Import Relevant Libraries
 
+# II. Preprocessing: Date Objects in R
+
+The goal of preprocessing is to conform date data into R's date object, which has to follow ISO-8601 protocol. This section will also cover two major datetime libraries in R - lubridate and xts - and see how they can be used to extract useful information from datetime object. 
+
+Do not skip this section if:
+
+  - date column does not follow ISO-8601 format.
+  - need to extract datetime components or combine individual datetime components
+  - need to adjust time zone
+  - need to make use of time intervals
+  - need to make use of weekday/weekend/holiday information
+
+Date is a special type of data in R. I will review some key functions in R base function and class, lubridate, and xts packagesthat help us maniupuate time data. These functions will be key in feature extraction of time related information.
+
+## R's base Date object
+
+We can read date as factor or character, but we should read it as date object because we can work with it more easily. R's dates act like numbers in that inequality relation holds and we can do arithmetic on it as well as other numeric operations such as max() and min().
+
+When we want to visualize dates in ggplot2, we can can specify the limits by xlim or scale_x_Date functions
+
+When we import raw data, it is usually read as a string, and we need R to recognize a string as a datetime by converting it with the functions as.POSIXct(). as.POSIXct() expects strings to be in the format YYYY-MM-DD HH:MM:SS. The function is not as flexible and expects the string to follow a strict stanard of ISO-8601.
+
+What is POSIXct? Class "POSIXct" represents the (signed) number of seconds since the beginning of 1970 (in the UTC time zone) as a numeric vector. Class "POSIXlt" is a named list of vectors representing sec. 0â€“61: seconds.
+
+What is ISO8601? Representation of dates and times is an international standard covering the exchange of date- and time-related data. It was issued by the International Organization for Standardization and was first published in 1988.
+
+The base functions are:
+  - as.POSIXct()
+  - as.Date()
+  - strptime() 
+  - format()
+  - ISOdate()
+  - difftime()
+  
+### Parsing and Reformat Time Date
+
+Code	Meaning	          Code	Meaning
+%a	Abbreviated weekday	 %A	Full weekday
+%b	Abbreviated month   	%B	Full month
+%c	Locale-specific date and time	%d	Decimal date
+%H	Decimal hours (24 hour)	%I	Decimal hours (12 hour)
+%j	Decimal day of the year	%m	Decimal month
+%M	Decimal minute	%p	Locale-specific AM/PM
+%S	Decimal second	%U	Decimal week of the year (starting on Sunday)
+%w	Decimal Weekday (0=Sunday)	%W	Decimal week of the year (starting on Monday)
+%x	Locale-specific Date	%X	Locale-specific Time
+%y	2-digit year	%Y	4-digit year
+%z	Offset from GMT	%Z	Time zone (character)
+
+We can parse data that do not follow ISO-8601 format.
 ```{r}
-library(xts) # contains zoo, extensible time series, conversion to ts object
-library(TSA) # DirRec(), beersales data
-library(hms) # hms object
-library(fpp2)
-library(urca) # unit root test 
-library(vars) # vector autoregressions
-library(astsa) # applied statistical time series analysis; ARIMA models
-library(readr) # read csv file more efficiently
-library(dplyr) # data manpluation
-library(fGarch) # garchFit()
-library(tseries) # ADF and KPSS tests
-library(anytime)
-library(ggplot2) # visualiztion, autoplot
-library(forecast) # forecast(), auto.arima(), ggseasonplot(), ggsubseriesplot(), gglagplot(), ggAcf, ggPcf datasets: gold, woolyrnq, gas
-library(fracdiff) # fractional ARIMA
-library(fasttime) # fasster parsing than lubridate, fastPOSIXct()
-library(tidyverse) # data manipulation
-library(lubridate) # date object parsing, extraction, rounding
-library(DataCombine) # slide()
-library(PerformanceAnalytics) # chart.TimeSeries()
-# arma.innovation()
+mydate = strptime('16/Oct/2005:07:51:00',format='%d/%b/%Y:%H:%M:%S')
+format(thedate,'%A, %B %d, %Y %H:%M:%S')
+'%d%b%Y'
 ```
 
-#### Data
+### Subset Time Components
 
-1. Istanbul stock exchange 
-2. US GDP/UR
-3. Beer sales
+We can extract month, year, and hours of datetime. 
 ```{r}
-data(beersales)
+mydate = as.POSIXlt('2005-4-19 7:01:00')
+names(mydate)
 ```
-4. Gas CO2 emission
-5. CME 1: seat price
-6. CME 2: trading volume
-7. gold, oil, 
 
-# I. Preprocessing: Date Objects in R
+### Creating Regularly Spaced Time Series
 
-Date is a special type of data in R.
-
-### R's base Date object
-
-benefit of date object is we can work with it more easily. dates act like numbers ; inequality relation holds.
-
-in ggplot you can specify the limits by xlim or scale_x_Date functions
-
-can apply max() min()
-
-R to recognize a string as a datetime you need to convert it, although now you use as.POSIXct(). as.POSIXct() expects strings to be in the format YYYY-MM-DD HH:MM:SS.
-
-What is POSIXct
-
-What is ISO8601?
+We can create a regularly spaced time series in two different ways. 
 ```{r}
-
-Sys.timezone()
-OlsonNames(); length(OlsonNames)
-
-as.Date()
-
 # Create dates as a Date class object starting from 2016-01-01
-dates <- seq(as.Date("2016-01-01"), length = 5, by = "days")
-
-# Create dates
-dates <- as.Date("2016-01-01") + 0:4
-
-# Use as.POSIXct again but set the timezone to `"America/Los_Angeles"`
-as.POSIXct('2010-10-01 12:12:00', tz = 'America/Los_Angeles')
-
-# Examine structure of datetime column
-str(releases$datetime)
-
-# Store the release time as a POSIXct object
-release_time <- as.POSIXct("2015-04-16 07:13:33", tz = "UTC")
-
-# When is the first download of 3.2.0?
-logs %>% 
-  filter(datetime > release_time,
-    r_version == "3.2.0")
+dates1 <- seq(as.Date("2016-01-01"), length = 5, by = "days") # by can take 'weeks', '2 weeks', 'hours, etc argument
+dates2 <- as.Date("2016-01-01", format) + 0:4
+dates1 == dates2
+seq(as.Date('2000-6-1'),to=as.Date('2000-8-1'),by='2 weeks')
 ```
 
-### Lubridate 
+### Time Zones
 
-Strengths of lubridate library:
+We can change the time zone of data.
+
+Check the current time zone
+```{r}
+# check the system time zone
+print(paste0('The currenet system\'s time zone is: ', Sys.timezone()))
+```
+
+```{r}
+# What are the time
+print(paste0('There are ', as.character(length(OlsonNames())), ' recognized Olson\'s time zone names'))
+```
+
+Change the timezone
+```{r}
+# set the timezone to `"America/Los_Angeles"`
+as.POSIXct('2010-10-01 12:12:00', tz = 'America/Los_Angeles')
+```
+
+### Period between Two Times
+
+We can calculate the period between the two datetimes. We can use this to create a new feature. For example, to predict sales during holidays, we can calculate a variable that measures distance from holiday.
+```{r}
+b1 = ISOdate(1977,7,13)
+b2 = ISOdate(2003,8,14)
+b2 - b1
+difftime(b2,b1,units='weeks')
+```
+
+## Lubridate 
+
+While default base R provides great functionalities, it is not as flexible and easy to use as lubridate. In most cases, for parsing and other purposes, I opt for lubridate package. 
+
+The strengths of lubridate library:
+
 - Lubridates allow us to easily create new columns on date or time components. 
 - It also allows us to parse non-standard date formats
 - It allows us to subset dates using rounding
 - combine individual date component
 - Can work with base R and xts/zoo as well.
 
-Parsing weird orders: 
+### Parsing weird orders: 
+
 ```{r}
 # Specify an order string to parse x
 x <- "Monday June 1st 2010 at 4pm"
@@ -183,14 +329,9 @@ short_dates <- c("11 December 1282", "May 1372", "1253")
 parse_date_time(short_dates, orders = c('d0mY', '0mY', 'Y'))
 ```
 
-Combining Time Components
+### Combining Time Components
+
 ```{r}
-# Import "akl_weather_hourly_2016.csv"
-akl_hourly_raw <- read_csv('akl_weather_hourly_2016.csv')
-
-# Print akl_hourly_raw
-print(akl_hourly_raw)
-
 # Use make_date() to combine year, month and mday 
 akl_hourly  <- akl_hourly_raw  %>% 
   mutate(date = make_date(year = year, month = month, day = mday))
@@ -211,14 +352,9 @@ ggplot(akl_hourly, aes(x = datetime, y = temperature)) +
 
 ```
 
-Extract time components
+### Extract time components
+
 ```{r}
-# Examine the head() of release_time
-head(release_time)
-
-# Examine the head() of the months of release_time
-head(month(release_time))
-
 # Extract the month of releases 
 month(release_time) %>% table()
 
@@ -232,7 +368,8 @@ mean(hour(release_time) < 12)
 mean(am(release_time))
 ```
 
-Labeling weekdays
+### Labeling weekdays
+
 ```{r}
 # Use wday() to tabulate release by day of the week
 wday(releases$datetime) %>% table()
@@ -249,7 +386,7 @@ ggplot(releases, aes(x = wday)) +
   facet_wrap(~ type, ncol = 1, scale = "free_y")
 ```
 
-Extracting for Filtering and Summarizing
+### Extracting for Filtering and Summarizing
 ```{r}
 # Add columns for year, yday and month
 akl_daily <- akl_daily %>%
@@ -265,10 +402,7 @@ ggplot(akl_daily, aes(x = yday, y = max_temp)) +
 # Examine distribution of max_temp by month
 ggplot(akl_daily, aes(x = max_temp, y = month, height = ..density..)) +
   geom_density_ridges(stat = "density")
-```
 
-Extracting for filtering and summarizing
-```{r}
 # Create new columns hour, month and rainy
 akl_hourly <- akl_hourly %>%
   mutate(
@@ -301,32 +435,32 @@ When is rounding useful? In a lot of the same situations extracting date compone
 
 All three take a unit argument which specifies the resolution of rounding. You can specify "second", "minute", "hour", "day", "week", "month", "bimonth", "quarter", "halfyear", or "year". Or, you can specify any multiple of those units, e.g. "5 years", "3 minutes" etc.
 ```{r}
-r_3_4_1 <- ymd_hms("2016-05-03 07:13:28 UTC")
+day1 <- ymd_hms("2016-05-03 07:13:28 UTC")
 
 # Round down to day
-floor_date(r_3_4_1, unit = 'day')
+floor_date(day1, unit = 'day')
 
 # Round to nearest 5 minutes
-round_date(r_3_4_1, unit = '5 minutes')
+round_date(day1, unit = '5 minutes')
 
 # Round up to week 
-ceiling_date(r_3_4_1, unit = 'week')
+ceiling_date(day1, unit = 'week')
 
-# Subtract r_3_4_1 rounded down to day
-r_3_4_1 - floor_date(r_3_4_1, unit = 'day')
+# Subtract day1 rounded down to day
+day1 - floor_date(day1, unit = 'day')
 
 # Create day_hour, datetime rounded down to hour
-akl_hourly <- akl_hourly %>%
+data <- data %>%
   mutate(
     day_hour = floor_date(datetime, unit = 'hour')
   )
 
 # Count observations per hour  
-akl_hourly %>% 
+data %>% 
   count(day_hour) 
 
 # Find day_hours with n != 2  
-akl_hourly %>% 
+data %>% 
   count(day_hour) %>%
   filter(n != 2) %>% 
   arrange(desc(n))
@@ -367,7 +501,7 @@ difftime(mar_12, mar_11, units = 'secs')
 
 #### Time Spans: Periods and Durations
 
-Timespans are hard because they dont hve constant meaning. 
+Timespans are hard because they dont have constant meaning. 
 
 Define two time spans: 
 1. period: human concept of a time span, datetime + period of one day = same time on the next date, variable length
@@ -455,14 +589,10 @@ But use these operators with caution, unlike + and -, you might not get x back f
 
 #### Intervals
 
-ou can create an interval by using the operator %--% with two datetimes. For example ymd("2001-01-01") %--% ymd("2001-12-31") creates an interval for the year of 2001.
+You can create an interval by using the operator %--% with two datetimes. For example ymd("2001-01-01") %--% ymd("2001-12-31") creates an interval for the year of 2001.
 
-Once you have an interval you can find out certain properties like its start, end and length with int_start(), int_end() and int_length() respectively.
-
+Once you have an interval you can find out certain properties like its start, end and length with int_start(), int_end() and int_length() respectively
 ```{r}
-# Print monarchs
- print(monarchs)
-
 # Create an interval for reign
 monarchs <- monarchs %>%
   mutate(reign = from %--% to) 
@@ -650,23 +780,23 @@ as.xts() # ts -> xts
 read.zoo()
 ```
 
-# II. EDA and Visualization
+# III. EDA and Visualization
 
-Graphs enable you to visualize many features of the data, including patterns, unusual observations, changes over time, and relationships between variables. Just as the type of data determines which forecasting method to use, it also determines which graphs are appropriate.
+Once we have cleaned data using R's libraries, we can inspect and explore patterns in data. 
 
-## ggplot2
+The best tool is graph. Graphs enable us to visualize many features of the data, including patterns, unusual observations, changes over time, and relationships between variables. Just as the type of data determines which forecasting method to use, it also determines which graphs are appropriate.
 
-We can use scale_x_Date to adjust axis scale.
-```{r}
-# Examine histograms of downloads by version
-ggplot(logs, aes(x = datetime)) +
-  geom_histogram() +
-  geom_vline(aes(xintercept = as.numeric(release_time)))+
-  facet_wrap(~ r_version, ncol = 1)
+As mentioned earlier, R has two time series objects - ts and xts. Each object entails different functions. For more in-depth analysis on multivariate data, I use library(plotly) to explore greater details. 
 
-xlim(as.Date(date1), as.Date(date2))
-scale_x_Date(date_breaks = '10 years', date_labels = '%Y')
-```
+There are four important aspects to consider. 
+
+  1. Univariate Analysis - distributional analysis (histogram, boxplot)
+  2. Multivariate Analysis - Multiple line charts and Correlation Matrix
+  2. Trend and Seasonality Analysis
+    - Seasonality plot
+    - Subseasonality plots 
+  3. Stationarity
+  4. Decomposition
 
 ## xts Plotting
 
@@ -718,7 +848,7 @@ legend(x ='bottomright',
 #### Adjusting labels
 
 ```{r}
-# Same plot as the previous exercise
+# Same plot 
 plot(data$microsoft, main = "Dividend date and amount")
 lines(data$citigroup, col = "orange", lwd = 2)
 axis(side = 4, at = pretty(data$citigroup), col = "orange")
@@ -791,7 +921,8 @@ plot(sp500, citi)
 abline(reg=lm(citi ~ sp500), col='red', lwd=2)
 ```
 
-Correlation matrix
+### Correlation matrix
+
 What if you want to evaluate the relationship between mutiple time series? The most common tool to use is a correlation matrix, which is a table showing correlation coefficients between pairs of variables. Several types of correlations exist but the most used ones are:
 
 Pearson correlation: measures the linear relationship between 2 variables
@@ -819,6 +950,8 @@ pairs(my_data, lower.panel = NULL)
 ```
 
 R offers other ways of displaying the correlation matrix. With the corrplot package, the visualization of correlations is made easier and more powerful by allowing you to represent the correlations with numbers, symbols, colors, and more.
+
+### Corrplot
 
 corrplot() function to draw some correlation charts.
 "circle", "square", "ellipse", "number", "shade", "color", "pie"
@@ -861,8 +994,104 @@ charts.PerformanceSummary(old.vs.new.portfolio$new.portfolio.rtn)
 charts.PerformanceSummary(old.vs.new.portfolio[,c('old.portfolio.rtn', 'new.portfolio.rtn')])
 ```
 
-## ts plotting with autoplot
+## ts object
 
+#### Missing Data
+
+```{r}
+gold2 <- na.interp(gold)
+autoplot(gold2, series="Interpolated") +
+  autolayer(gold, series="Original") +
+  scale_colour_manual(
+    values=c(`Interpolated`="red",`Original`="gray"))
+```
+
+#### Outlier
+
+```{r}
+tsoutliers(gold)
+gold %>%
+  tsclean() %>%
+  ets() %>%
+  forecast(h=50) %>%
+  autoplot()
+```
+
+### Univariate Time Series
+
+We need to learn three characteristics of time series: location, dispersion, and distribution. 
+
+The very first step in the analysis of any time series is to address if the time series have the right mathematical properties to apply the standard statistical framework. If not, you must transform the time series first.
+
+In finance, price series are often transformed to differenced data, making it a return series. In R, the ROC() (which stands for "Rate of Change") function from the TTR package does this automatically to a price or volume series x
+```{r}
+# Plot Apple's stock price 
+plot(data, main = "Apple stock price")
+
+# Create a time series called rtn
+rtn <- ROC(data)
+
+# Plot Apple daily price and daily returns 
+par(mfrow=c(1,2))
+plot(data)
+plot(rtn)
+```
+
+distribution of time series: histogram and boxplot
+
+help detect outliers. in finance, this indicates riskiness of stock.
+
+A simple chart of returns does not reveal much about the time series properties; often, data must be displayed in a different format to visualize interesting features.
+
+The density function, represented by the histogram of returns, indicates the most common returns in a time series without taking time into account. In R, these are calculated with the hist() and density() functions.
+```{r}
+# Create a histogram of Apple stock returns
+hist(rtn, main = 'Apple stock return distribution', probability = TRUE)
+
+# Add a density line
+lines(density(rtn))
+
+# Redraw a thicker, red density line
+lines(density(rtn), col = 'red', lwd = 2)
+```
+
+```{r}
+# Plot new and old portfolio values on same chart
+plot(old.vs.new.portfolio$old.portfolio.value)
+lines(old.vs.new.portfolio$new.portfolio.value, col = "red")
+
+# Plot density of the new and old portfolio returns on same chart
+plot(density(old.vs.new.portfolio$old.portfolio.rtn))
+lines(density(old.vs.new.portfolio$new.portfolio.rtn), col ="red")
+```
+
+A box and whisker plot gives information regarding the shape, variability, and center (or median) of a data set. It is particularly useful for displaying skewed data.
+
+By comparing the data set to a standard normal distribution, you can identify departure from normality (asymmetry, skewness, etc). The lines extending parallel from the boxes are known as whiskers, which are used to indicate variability outside the upper and lower quartiles, i.e. outliers. Those outliers are usually plotted as individual dots that are in-line with whiskers.
+```{r}
+# Redraw both plots on the same graphical window
+par(mfrow=c(2,1))
+boxplot(rtn, horizontal = T)
+boxplot(rnorm(1000), horizontal = T)
+```
+
+## ggplot2
+
+We can always use ggplot2 to make lineplots. 
+
+We can use scale_x_Date to adjust axis scale.
+```{r}
+# Examine histograms of downloads by version
+ggplot(logs, aes(x = datetime)) +
+  geom_histogram() +
+  geom_vline(aes(xintercept = as.numeric(release_time)))+
+  facet_wrap(~ r_version, ncol = 1)
+
+xlim(as.Date(date1), as.Date(date2))
+scale_x_Date(date_breaks = '10 years', date_labels = '%Y')
+```
+
+## autoplot()
 use the autoplot() function to produce a time plot of the data with or without facets, or panels that display different subsets of data
 
 which.max() can be used to identify the smallest index of the maximum value
@@ -939,84 +1168,6 @@ gglagplot(oil)
 
 Look at how the relationships change as the lag increases.
 
-#### Missing Data
-
-```{r}
-gold2 <- na.interp(gold)
-autoplot(gold2, series="Interpolated") +
-  autolayer(gold, series="Original") +
-  scale_colour_manual(
-    values=c(`Interpolated`="red",`Original`="gray"))
-```
-
-#### Outlier
-
-```{r}
-tsoutliers(gold)
-gold %>%
-  tsclean() %>%
-  ets() %>%
-  forecast(h=50) %>%
-  autoplot()
-```
-
-### Univariate Time Series
-We need to learn three characteristics of time series: location, dispersion, and distribution. 
-
-The very first step in the analysis of any time series is to address if the time series have the right mathematical properties to apply the standard statistical framework. If not, you must transform the time series first.
-
-In finance, price series are often transformed to differenced data, making it a return series. In R, the ROC() (which stands for "Rate of Change") function from the TTR package does this automatically to a price or volume series x
-```{r}
-# Plot Apple's stock price 
-plot(data, main = "Apple stock price")
-
-# Create a time series called rtn
-rtn <- ROC(data)
-
-# Plot Apple daily price and daily returns 
-par(mfrow=c(1,2))
-plot(data)
-plot(rtn)
-```
-
-distribution of time series: histogram and boxplot
-
-help detect outliers. in finance, this indicates riskiness of stock.
-
-A simple chart of returns does not reveal much about the time series properties; often, data must be displayed in a different format to visualize interesting features.
-
-The density function, represented by the histogram of returns, indicates the most common returns in a time series without taking time into account. In R, these are calculated with the hist() and density() functions.
-```{r}
-# Create a histogram of Apple stock returns
-hist(rtn, main = 'Apple stock return distribution', probability = TRUE)
-
-# Add a density line
-lines(density(rtn))
-
-# Redraw a thicker, red density line
-lines(density(rtn), col = 'red', lwd = 2)
-```
-
-```{r}
-# Plot new and old portfolio values on same chart
-plot(old.vs.new.portfolio$old.portfolio.value)
-lines(old.vs.new.portfolio$new.portfolio.value, col = "red")
-
-# Plot density of the new and old portfolio returns on same chart
-plot(density(old.vs.new.portfolio$old.portfolio.rtn))
-lines(density(old.vs.new.portfolio$new.portfolio.rtn), col ="red")
-```
-
-A box and whisker plot gives information regarding the shape, variability, and center (or median) of a data set. It is particularly useful for displaying skewed data.
-
-By comparing the data set to a standard normal distribution, you can identify departure from normality (asymmetry, skewness, etc). The lines extending parallel from the boxes are known as whiskers, which are used to indicate variability outside the upper and lower quartiles, i.e. outliers. Those outliers are usually plotted as individual dots that are in-line with whiskers.
-```{r}
-# Redraw both plots on the same graphical window
-par(mfrow=c(2,1))
-boxplot(rtn, horizontal = T)
-boxplot(rnorm(1000), horizontal = T)
-```
-
 Autocorrelogram: blue horizontal lines represent positive and negative significance thresholds; autocorrelation is important because it rells you the relationship between observations
 
 Another important piece of information is the relationship between one point in the time series and points that come before it. This is called autocorrelation and it can be displayed as a chart which indicates the correlation between points separated by various time lags.
@@ -1043,6 +1194,7 @@ qqline(rtn, col = 'red')
 ## Stationarity
 
 Stationary series is stable:
+
   - mean is constant over time (no trend)
   - correlation structure (variability) remains constant over time (e.g. first half and second half should look the same); relationship between contiguous values remains the same 
   
@@ -1067,6 +1219,20 @@ When data are either seasonal or cyclic, the ACF will peak around the seasonal l
 
 Ljung box test considers the first h autocorrelation values altogether. A significant test (small p-value) indicates the data are probably not white noise.
 ```{r}
+# Ljung-Box test of the differenced series
+Box.test(goog, lag = 10, type = "Ljung")
+```
+
+### Differencing
+
+ This shows one way to make a non-stationary time series stationary - compute the differences between consecutive observations. This is known as differencing.
+
+#### First Differencing
+
+Transformations such as logarithms can help to stabilise the variance of a time series. Differencing can help stabilise the mean of a time series by removing changes in the level of a time series, and therefore eliminating (or reducing) trend and seasonality.
+
+As well as looking at the time plot of the data, the ACF plot is also useful for identifying non-stationary time series. For a stationary time series, the ACF will drop to zero relatively quickly, while the ACF of non-stationary data decreases slowly. Also, for non-stationary data, the value of r1is often large and positive.
+```{r}
 # Plot the original series
 autoplot(goog)
 
@@ -1076,37 +1242,26 @@ autoplot(diff(goog))
 # ACF of the differenced series
 ggAcf(diff(goog))
 
-# Ljung-Box test of the differenced series
-Box.test(diff(goog), lag = 10, type = "Ljung")
-```
 
+```
 
 differencing both your trend stationary data and your random walk data has the effect of removing the trend
 ```{r}
 plot(diff(x))
 ```
 
-Time series with trend and heteroskedasticity
+## Time series with trend and heteroskedasticity
 Example: time series with percentage growth each period like savings $X_{t} = (1+p_{t})X_{t-1}$. Log differencing can create $log X_{t} - log X_{t-1} = p_{t}$
 ```{r}
 plot(diff(log(x)))
 ```
 
-A stationary time series is one whose properties do not depend on the time at which the series is observed. Thus, time series with trends, or with seasonality, are not stationary - the trend and seasonality will affect the value of the time series at different times. On the other hand, a white noise series is stationary - it does not matter when you observe it, it should look much the same at any point in time. Some cases can be confusing - a time series with cyclic behaviour (but with no trend or seasonality) is stationary. This is because the cycles are not of a fixed length, so before we observe the series we cannot be sure where the peaks and troughs of the cycles will be. In general, a stationary time series will have no predictable patterns in the long-term. Time plots will show the series to be roughly horizontal (although some cyclic behaviour is possible), with constant variance.
-
-### Differencing
- This shows one way to make a non-stationary time series stationary - compute the differences between consecutive observations. This is known as differencing.
-
-#### First Differencing
-Transformations such as logarithms can help to stabilise the variance of a time series. Differencing can help stabilise the mean of a time series by removing changes in the level of a time series, and therefore eliminating (or reducing) trend and seasonality.
-
-As well as looking at the time plot of the data, the ACF plot is also useful for identifying non-stationary time series. For a stationary time series, the ACF will drop to zero relatively quickly, while the ACF of non-stationary data decreases slowly. Also, for non-stationary data, the value of r1is often large and positive.
-
+A stationary time series is one whose properties do not depend on the time at which the series is observed. Thus, time series with trends, or with seasonality, are not stationary - the trend and seasonality will affect the value of the time series at different times. On the other hand, a white noise series is stationary - it does not matter when you observe it, it should look much the same at any point in time. Some cases can be confusing - a time series with cyclic behaviour (but with no trend or seasonality) is stationary. This is because the cycles are not of a fixed length, so before we observe the series we cannot be sure where the peaks and troughs of the cycles will be. In general, a stationary time series will have no predictable patterns in the long-term. Time plots will show the series to be roughly horizontal (although some cyclic behavior is possible), with constant variance.
 ```{r}
 Box.test(diff(goog200), lag=10, type="Ljung-Box")
 ```
 
-Non-seasonal differencing for stationarity
+## Non-seasonal differencing for stationarity
 Differencing is a way of making a time series stationary; this means that you remove any systematic patterns such as trend and seasonality from the data. A white noise series is considered a special case of a stationary time series.
 
 With non-seasonal data, you use lag-1 differences to model changes between observations rather than the observations directly. 
@@ -1118,7 +1273,7 @@ autoplot(diff(wmurders))
 ggAcf(diff(wmurders))
 ```
 
-Seasonal differencing for stationarity
+## Seasonal differencing for stationarity
 With seasonal data, differences are often taken between observations in the same season of consecutive years, rather than in consecutive periods. For example, with quarterly data, one would take the difference between Q1 in one year and Q1 in the previous year. This is called seasonal differencing.
 
 Sometimes you need to apply both seasonal differences and lag-1 differences to the same series, thus, calculating the differences in the differences.
@@ -1141,6 +1296,7 @@ ggAcf(ddifflogh02)
 ```
 
 #### Seasonal Differencing
+
 A seasonal difference is the difference between an observation and the previous observation from the same season.
 ```{r}
 cbind("Sales ($million)" = a10,
@@ -1152,6 +1308,7 @@ cbind("Sales ($million)" = a10,
 ```
 
 #### Both
+
 When both seasonal and first differences are applied, it makes no difference which is done first-the result will be the same. However, if the data have a strong seasonal pattern, we recommend that seasonal differencing be done first, because the resulting series will sometimes be stationary and there will be no need for a further first difference. If first differencing is done first, there will still be seasonality present.
 ```{r}
 cbind("Billion kWh" = usmelec,
@@ -1182,124 +1339,25 @@ plot(d_unemp)
 # Seasonally difference d_unemp and plot it
 dd_unemp <- diff(d_unemp, lag = 12)  
 plot(dd_unemp)
-
 ```
 
-#### Do we need differencing?
+### Do we need differencing?
+
 One way to determine more objectively whether differencing is required is to use a unit root test. These are statistical hypothesis tests of stationarity that are designed for determining whether differencing is required.
 A number of unit root tests are available, which are based on different assumptions and may lead to conflicting answers. In our analysis, we use the Kwiatkowski-Phillips-Schmidt-Shin (KPSS) test (Kwiatkowski, Phillips, Schmidt, & Shin. In this test, the null hypothesis is that the data are stationary, and we look for evidence that the null hypothesis is false. Consequently, small p-values (e.g., less than 0.05) suggest that differencing is required.
 
 This process of using a sequence of KPSS tests to determine the appropriate number of first differences is carried out by the function ndiffs().
 
 A similar function for determining whether seasonal differencing is required is nsdiffs(), which uses the measure of seasonal strength
-
 ```{r}
 goog %>% ur.kpss() %>% summary()
 ndiffs(goog)
 usmelec %>% log() %>% nsdiffs()
 ```
 
-# III. Feature Engineering:
+## Decomposition of Time Series into Trend and Seasonality 
 
-1. Trend
-
-2. Dummy Variables
-
-3. Seasonal Dummy
-
-4. Intervention Variable
-
-5. Trading Day
-
-6. Distributed lag
-
-7. Fourier Series
-
-## A. Transformation
-
-### Variance Stabilization Transform
-
-1. Box-Cox transform
-You want to find a value of $\lambda$ that makes the seasonal fluctuations of roughly the same size across the series.
-
-```{r}
-# Try lambda in Box-Cox transformations
-a10 %>% BoxCox(lambda = 0.0) %>% autoplot()
-
-# Compare with BoxCox.lambda()
-BoxCox.lambda(a10)
-```
-
-### Differenced Time Series
-
-
-
-### Seasonally Differenced Time Series
-
-
-
-Time Series decomposition into trend-cycle, seasonal, and remainder
-
-If the variation due to seasonality is not of primary interest, the seasonally adjusted series can be useful. For example, monthly unemployment data are usually seasonally adjusted in order to highlight variation due to the underlying state of the economy rather than the seasonal variation. An increase in unemployment due to school leavers seeking work is seasonal variation, while an increase in unemployment due to an economic recession is non-seasonal. Most economic analysts who study unemployment data are more interested in the non-seasonal variation. Consequently, employment data (and many other economic series) are usually seasonally adjusted.
-
-Seasonally adjusted series contain the remainder component as well as the trend-cycle. Therefore, they are not "smooth", and "downturns" or "upturns" can be misleading. If the purpose is to look for turning points in a series, and interpret any changes in direction, then it is better to use the trend-cycle component rather than the seasonally adjusted data.
-
-calendar adjustments, population adjustments, inflation adjustments and mathematical transformations
-
-For example, if you are studying the monthly milk production on a farm, there will be variation between the months simply because of the different numbers of days in each month, in addition to the seasonal variation across the year.
-
-```{r}
-dframe <- cbind(Monthly = milk,
-                DailyAverage = milk/monthdays(milk))
-  autoplot(dframe, facet=TRUE) +
-    xlab("Years") + ylab("Pounds") +
-    ggtitle("Milk production per cow")
-
-```
-
-```{r}
-(lambda <- BoxCox.lambda(elec))
-#> [1] 0.2654
-autoplot(BoxCox(elec,lambda))
-
-```
-
-```{r}
-fc <- rwf(eggs, drift=TRUE, lambda=0, h=50, level=80)
-fc2 <- rwf(eggs, drift=TRUE, lambda=0, h=50, level=80,
-  biasadj=TRUE)
-autoplot(eggs) +
-  autolayer(fc, series="Simple back transformation") +
-  autolayer(fc2, series="Bias adjusted", PI=FALSE) +
-  guides(colour=guide_legend(title="Forecast"))
-```
-
-#### Nonlinear Transform
-
-While this provides a non-linear functional form, the model is still linear in the parameters. The most commonly used transformation is the (natural) logarithm 
-can be interpreted as an elasticity:
-
-## Decomposition
-
-### 1. Moving Average
-```{r}
-ma(elecsales, 5)
-
-```
-Simple moving averages such as these are usually of an odd order (e.g., 3, 5, 7, etc.). This is so they are symmetric
-It is possible to apply a moving average to a moving average. One reason for doing this is to make an even-order moving average symmetric.
-The most common use of centred moving averages is for estimating the trend-cycle from seasonal data. 
-
-```{r}
-autoplot(elecequip, series="Data") +
-  autolayer(ma(elecequip, 12), series="12-MA") +
-  xlab("Year") + ylab("New orders index") +
-  ggtitle("Electrical equipment manufacturing (Euro area)") +
-  scale_colour_manual(values=c("Data"="grey","12-MA"="red"),
-                      breaks=c("Data","12-MA"))
-```
-
-### 2. Classical Decomposition: Additive and Mltiplicative
+### Classical Decomposition: Additive and Mltiplicative
 ```{r}
 elecequip %>% decompose(type="multiplicative") %>%
   autoplot() + xlab("Year") +
@@ -1308,7 +1366,7 @@ elecequip %>% decompose(type="multiplicative") %>%
 
 ```
 
-### 3. X11 Decomposition
+### X11 Decomposition
 Another popular method for decomposing quarterly and monthly data is the X11 method which originated in the US Census Bureau and Statistics Canada. The process is entirely automatic and tends to be highly robust to outliers and level shifts in the time series.
 
 ```{r}
@@ -1318,7 +1376,6 @@ autoplot(fit) +
   ggtitle("X11 decomposition of electrical equipment index")
 
 ```
-
 
 ```{r}
 autoplot(elecequip, series="Data") +
@@ -1330,15 +1387,13 @@ autoplot(elecequip, series="Data") +
              breaks=c("Data","Seasonally Adjusted","Trend"))
 ```
 
-
 ```{r}
 fit %>% seasonal() %>% ggsubseriesplot() + ylab("Seasonal")
 ```
 
-### 4. SEATS
+### SEATS
 
 "SEATS" stands for "Seasonal Extraction in ARIMA Time Series" This procedure was developed at the Bank of Spain, and is now widely used by government agencies around the world. The procedure works only with quarterly and monthly data. So seasonality of other kinds, such as daily data, or hourly data, or weekly data, require an alternative approach.
-
 ```{r}
 library(seasonal)
 elecequip %>% seas() %>%
@@ -1346,7 +1401,8 @@ autoplot() +
   ggtitle("SEATS decomposition of electrical equipment index")
 ```
 
-### 5. STL
+### STL
+
 STL is a versatile and robust method for decomposing time series. STL is an acronym for "Seasonal and Trend decomposition using Loess", while Loess is a method for estimating nonlinear relationships. The STL method was developed by Cleveland, Cleveland, McRae, & Terpenning
 
 Unlike SEATS and X11, STL will handle any type of seasonality, not only monthly and quarterly data.
@@ -1368,250 +1424,163 @@ The mstl() function provides a convenient automated STL decomposition using s.wi
 
 As with the other decomposition methods discussed in this book, to obtain the separate components plotted in Figure 6.8, use the seasonal() function for the seasonal component, the trendcycle() function for trend-cycle component, and the remainder() function for the remainder component. The seasadj() function can be used to compute the seasonally adjusted series.
 
-# Multiple Seasonality
+### Multiple Seasonality
+
 ```{r}
 calls %>% mstl() %>%
   autoplot() + xlab("Week")
 ```
 
-### 6. Measuring Trend and Seasonality
-For strongly trended data, the seasonally adjusted data should have much more variation than the remainder component. 
+# IV. Feature Engineering:
 
-#### a. What to do with decomposition?
-While decomposition is primarily useful for studying time series data, and exploring historical changes over time, it can also be used in forecasting.
+## Creating New Features 
 
-To forecast a decomposed time series, we forecast the seasonal component,  and the seasonally adjusted component  imated component. In other words, a seasonal naïve method is used for the seasonal component.
+We can create time-related features such as holiday or weekends using lubridate. 
 
-To forecast the seasonally adjusted component, any non-seasonal forecasting method may be used. For example, a random walk with drift model, or Holt's method (discussed in the next chapter), or a non-seasonal ARIMA model 
+1. The number of hours and days from certain event
+- how far observation is from Christmas
 ```{r}
-fit <- stl(elecequip, t.window=13, s.window="periodic",
-  robust=TRUE)
-fit %>% seasadj() %>% naive() %>%
-  autoplot() + ylab("New orders index") +
-  ggtitle("Naive forecasts of seasonally adjusted data")
 
 ```
 
-shows naïve forecasts of the seasonally adjusted electrical equipment orders data. These are then "reseasonalised" by adding in the seasonal naïve forecasts of the seasonal component.
-
-This is made easy with the forecast() function applied to the stl object. You need to specify the method being used on the seasonally adjusted data, and the function will do the reseasonalising for you. 
+2. Components of Date such as weekday vs weekend given time data
 ```{r}
-fit %>% forecast(method="naive") %>%
-  autoplot() + ylab("New orders index")
+
 ```
 
-# IV. Model Selection and Evaluation
-
-Note that forecast errors are different from residuals in two ways. First, residuals are calculated on the training set while forecast errors are calculated on the test set. Second, residuals are based on one-step forecasts while forecast errors can involve multi-step forecasts.
-
-## Creating a Train-Test Set
+3. Time interval overlaps?
 ```{r}
-window(ausbeer, start=1995)
-subset(ausbeer, start=length(ausbeer)-4*5)
 
-subset(ausbeer, quarter = 1)
-tail(ausbeer, 4*5)
 ```
 
-The two most commonly used scale-dependent measures are based on the absolute errors or squared errors
-When comparing forecast methods applied to a single time series, or to several time series with the same units, the MAE is popular as it is easy to both understand and compute. A forecast method that minimises the MAE will lead to forecasts of the median, while minimising the RMSE will lead to forecasts of the mean. Consequently, the RMSE is also widely used, despite being more difficult to interpret.
-
-Percentage errors have the advantage of being unit-free, and so are frequently used to compare forecast performances between data sets. 
-
-Another problem with percentage errors that is often overlooked is that they assume the unit of measurement has a meaningful zero.2 For example, a percentage error makes no sense when measuring the accuracy of temperature forecasts on either the Fahrenheit or Celsius scales, because temperature has an arbitrary zero point
-
-They also have the disadvantage that they put a heavier penalty on negative errors than on positive errors. This observation led to the use of the so-called "symmetric" MAPE (sMAPE)
-However, if  yt is close to zero,  ^yt is also likely to be close to zero. Thus, the measure still involves division by a number close to zero, making the calculation unstable. Also, the value of sMAPE can be negative, so it is not really a measure of "absolute percentage errors" at all.Hyndman & Koehler (2006) recommend that the sMAPE not be used. It is included here only because it is widely used, although we will not use it in this book.
-
-We want residuals to look like white noise:
-1. they should be uncorrelated
-2. have zero mean
-3. have constant variance
-4. are normally distributed 
-
-As long as they have zero mean point forecasts re okay. But when normality and autocorrelation are not satisfied, confidence intervals are not relaiable
-
-
-In data science, a training set is a data set that is used to discover possible relationships. A test set is a data set that is used to verify the strength of these potential relationships. When you separate a data set into these parts, you generally allocate more of the data for training, and less for testing.
-
-One function that can be used to create training and test sets is subset.ts(), which returns a subset of a time series where the optional start and end arguments are specified using index values.
+4. Rounding Datetime to just month or week
 ```{r}
-train <- window(oil, end=2003)
-test <- window(oil, start=2004)
+
 ```
 
-## Evaluating Forecasts
-Forecast errors are errors on the test set while residuals are on train set. small residuals only means that the model fits the training data well, not that it produces good forecasts.
+## Variance Stabilization Transform
 
-Forecast accujracy measures: 
-
-1. Mean Absolute ERror
-2. Mean Squared Error
-3. Mean Absoslute Percentage Error: good for comparisons but only if data are all positive and have no zero or small values
-4. Mean Absolute Scaled Error: scaled error version of MAE
-
-## Time Series Cross-Validation
-Traiditonal evaluation
-
-Time series cross-validation: series of training and test sets. forecastingg on rolling points.
-
-The tsCV() function computes time series cross-validation errors. It requires you to specify the time series, the forecast method, and the forecast horizon
+Box-Cox transform
+You want to find a value of $\lambda$ that makes the seasonal fluctuations of roughly the same size across the series.
 ```{r}
-# Compute cross-validated errors for up to 8 steps ahead
-e <- tsCV(goog, forecastfunction = naive, h = 8)
+# Try lambda in Box-Cox transformations
+a10 %>% BoxCox(lambda = 0.0) %>% autoplot()
 
-# Compute the MSE values and remove missing values
-mse <- colMeans(e^2, na.rm = T)
-
-# Plot the MSE values against the forecast horizon
-data.frame(h = 1:8, MSE = mse) %>%
-  ggplot(aes(x = h, y = MSE)) + geom_point()
+# Compare with BoxCox.lambda()
+BoxCox.lambda(a10)
 ```
 
-## ASSumption Checks on Statistical Models
-
-### ACF of Residuals in Linear Regression
-Another useful test of autocorrelation in the residuals designed to take account for the regression model is the Breusch-Godfrey test, also referred to as the LM (Lagrange Multiplier) test for serial correlation. It is used to test the joint hypothesis that there is no autocorrelation in the residuals up to a certain specified order. A small p-value indicates there is significant autocorrelation remaining in the residuals.
-
-The Breusch-Godfrey test is similar to the Ljung-Box test, but it is specifically designed for use with regression models.
+Yeo-Johnson
 ```{r}
-checkresiduals(fit.consMR)
+
 ```
 
-### Residual Plots for Linear Regression against Predictors
-Residual plots against predictors
-We would expect the residuals to be randomly scattered without showing any systematic patterns. A simple and quick way to check this is to examine scatterplots of the residuals against each of the predictor variables. If these scatterplots show a pattern, then the relationship may be nonlinear and the model will need to be modified accordingly. See Section 5.8 for a discussion of nonlinear regression.
+## Smoothing
 
-It is also necessary to plot the residuals against any predictors that are not in the model. If any of these show a pattern, then the corresponding predictor may need to be added to the model (possibly in a nonlinear form).
 ```{r}
-df <- as.data.frame(uschange)
-df[,"Residuals"]  <- as.numeric(residuals(fit.consMR))
-p1 <- ggplot(df, aes(x=Income, y=Residuals)) +
-  geom_point()
-p2 <- ggplot(df, aes(x=Production, y=Residuals)) +
-  geom_point()
-p3 <- ggplot(df, aes(x=Savings, y=Residuals)) +
-  geom_point()
-p4 <- ggplot(df, aes(x=Unemployment, y=Residuals)) +
-  geom_point()
-gridExtra::grid.arrange(p1, p2, p3, p4, nrow=2)
+ma(elecsales, 5)
+
+```
+Simple moving averages such as these are usually of an odd order (e.g., 3, 5, 7, etc.). This is so they are symmetric
+It is possible to apply a moving average to a moving average. One reason for doing this is to make an even-order moving average symmetric.
+The most common use of centred moving averages is for estimating the trend-cycle from seasonal data. 
+
+```{r}
+autoplot(elecequip, series="Data") +
+  autolayer(ma(elecequip, 12), series="12-MA") +
+  xlab("Year") + ylab("New orders index") +
+  ggtitle("Electrical equipment manufacturing (Euro area)") +
+  scale_colour_manual(values=c("Data"="grey","12-MA"="red"),
+                      breaks=c("Data","12-MA"))
 ```
 
-### Residual Plots for Fitted Values
 
-A plot of the residuals against the fitted values should also show no pattern. If a pattern is observed, there may be "heteroscedasticity" in the errors which means that the variance of the residuals may not be constant. If this problem occurs, a transformation of the forecast variable such as a logarithm or square root may be required (see Section 3.2.)
+## Differencing and Detrending
+
+If we realize there is any trend, it is a good option to difference. 
 ```{r}
-cbind(Fitted = fitted(fit.consMR),
-      Residuals=residuals(fit.consMR)) %>%
-  as.data.frame() %>%
-  ggplot(aes(x=Fitted, y=Residuals)) + geom_point()
+
+```
+
+## Seasonal Adjustment
+
+When we realize there is a seasonality, then we should use seasonal differencing.
+```{r}
+
+```
+
+If the variation due to seasonality is not of primary interest, the seasonally adjusted series can be useful. For example, monthly unemployment data are usually seasonally adjusted in order to highlight variation due to the underlying state of the economy rather than the seasonal variation. An increase in unemployment due to school leavers seeking work is seasonal variation, while an increase in unemployment due to an economic recession is non-seasonal. Most economic analysts who study unemployment data are more interested in the non-seasonal variation. Consequently, employment data (and many other economic series) are usually seasonally adjusted.
+
+Seasonally adjusted series contain the remainder component as well as the trend-cycle. Therefore, they are not "smooth", and "downturns" or "upturns" can be misleading. If the purpose is to look for turning points in a series, and interpret any changes in direction, then it is better to use the trend-cycle component rather than the seasonally adjusted data.
+
+calendar adjustments, population adjustments, inflation adjustments and mathematical transformations
+
+For example, if you are studying the monthly milk production on a farm, there will be variation between the months simply because of the different numbers of days in each month, in addition to the seasonal variation across the year.
+
+```{r}
+dframe <- cbind(Monthly = milk,
+                DailyAverage = milk/monthdays(milk))
+  autoplot(dframe, facet=TRUE) +
+    xlab("Years") + ylab("Pounds") +
+    ggtitle("Milk production per cow")
+
 ```
 
 ```{r}
-res <- residuals(naive(goog200))
-autoplot(res) + xlab("Day") + ylab("") +
-  ggtitle("Residuals from naïve method")
+fc <- rwf(eggs, drift=TRUE, lambda=0, h=50, level=80)
+fc2 <- rwf(eggs, drift=TRUE, lambda=0, h=50, level=80,
+  biasadj=TRUE)
+autoplot(eggs) +
+  autolayer(fc, series="Simple back transformation") +
+  autolayer(fc2, series="Bias adjusted", PI=FALSE) +
+  guides(colour=guide_legend(title="Forecast"))
 ```
 
-```{r}
-gghistogram(res) + ggtitle("Histogram of residuals")
-ggAcf(res) + ggtitle("ACF of residuals")
-```
 
-```{r}
-checkresiduals(naive(goog200))
-```
+# V. Models and Forecasting
 
-These graphs show that the naïve method produces forecasts that appear to account for all available information. The mean of the residuals is close to zero and there is no significant correlation in the residuals series. The time plot of the residuals shows that the variation of the residuals stays much the same across the historical data, apart from the one outlier, and therefore the residual variance can be treated as constant. This can also be seen on the histogram of the residuals. The histogram suggests that the residuals may not be normal - the right tail seems a little too long, even when we ignore the outlier. Consequently, forecasts from this method will probably be quite good, but prediction intervals that are computed assuming a normal distribution may be inaccurate.
+Once objective is defined data cleaned, we can run models
 
-### Autocorrelation Test
-```{r}
-# lag=h and fitdf=K
-Box.test(res, lag=10, fitdf=0)
+Depending on the dataset we can run different models. 
 
-Box.test(res,lag=10, fitdf=0, type="Lj")
-```
+- Univariate Time Series
+ . Beer sales 
 
-## Feature Selection
-A common approach that is not recommended is to plot the forecast variable against a particular predictor and if there is no noticeable relationship, drop that predictor from the model. This is invalid because it is not always possible to see the relationship from a scatterplot, especially when the effects of other predictors have not been accounted for.
+- Multiple Time Series
+ . Istanbul stock exchange 
+ . US GDP and Unemployment Rate
+ . CO2 emission
+ . Chicago Mercantile Exchange seat price and trading volume
 
-Another common approach which is also invalid is to do a multiple linear regression on all the predictors and disregard all variables whose  
-p
- -values are greater than 0.05. To start with, statistical significance does not always indicate predictive value. Even if forecasting is not the goal, this is not a good strategy because the  
-p
- -values can be misleading when two or more predictors are correlated with each other
+- Hierarchicagl Time Series
+ . Energy Usage (Kaggle Competition)
+ . Walmart Sales (Kaggle Competition)
  
-```{r}
-# measure of predictive  
-CV(fit.consMR)
-``` 
+Model List
 
-## Confidence Interval
-```{r}
- fit.cons <- tslm(Consumption ~ Income, data = uschange)
-h <- 4
-fcast.ave <- forecast(fit.cons,
-  newdata = data.frame(
-    Income = rep(mean(uschange[,"Income"]), h)))
-fcast.up <- forecast(fit.cons,
-  newdata = data.frame(Income = rep(5, h)))
-autoplot(uschange[, "Consumption"]) +
-  ylab("% change in US consumption") +
-  autolayer(fcast.ave, series = "Average increase",
-    PI = TRUE) +
-  autolayer(fcast.up, series = "Extreme increase",
-    PI = TRUE) +
-  guides(colour = guide_legend(title = "Scenario"))
-```
-
-### Confidence Interval using Bootstrapping
-```{r}
-bootseries <- bld.mbb.bootstrap(debitcards, 10) %>%
-  as.data.frame() %>% ts(start=2000, frequency=12)
-autoplot(debitcards) +
-  autolayer(bootseries, colour=TRUE) +
-  autolayer(debitcards, colour=FALSE) +
-  ylab("Bootstrapped series") + guides(colour="none")
-```
-
-we simulate many time series that are similar to the original data, using the block-bootstrap described above.
-```{r}
-nsim <- 1000L
-sim <- bld.mbb.bootstrap(debitcards, nsim)
-```
-
-For each of these series, we fit an ETS model and simulate one sample path from that model.
-```{r}
-h <- 36L
-future <- matrix(0, nrow=nsim, ncol=h)
-for(i in seq(nsim))
-  future[i,] <- simulate(ets(sim[[i]]), nsim=h)
-```
-
-Finally, we take the means and quantiles of these simulated sample paths to form point forecasts and prediction intervals.
-```{r}
-start <- tsp(debitcards)[2]+1/12
-simfc <- structure(list(
-    mean = ts(colMeans(future), start=start, frequency=12),
-    lower = ts(apply(future, 2, quantile, prob=0.025),
-               start=start, frequency=12),
-    upper = ts(apply(future, 2, quantile, prob=0.975),
-               start=start, frequency=12),
-    level=95),
-  class="forecast")
-```
-
-These prediction intervals will be larger than those obtained from an ETS model applied directly to the original data.
-```{r}
-etsfc <- forecast(ets(debitcards), h=h, level=95)
-autoplot(debitcards) +
-  ggtitle("Monthly retail debit card usage in Iceland") +
-  xlab("Year") + ylab("million ISK") +
-  autolayer(simfc, series="Simulated") +
-  autolayer(etsfc, series="ETS")
-```
-
-# V. Models
+  1. Simple Models
+    - Average
+    - Naive
+    - Seasonal Naive
+    - Drift
+  2. Linear Regression
+  3. Cubic Spline
+  4. Exponential Smoothing
+    - Simple Exponential Smoothing
+    - Holt and Damped
+    - Holt Winter
+    - State Soace and ETS 
+  5. ARIMA
+    - ARIMA
+    - Dynamic ARIMA
+    - SARIMA
+    - ARFIMA
+    - VARMA
+  6. TBATS
+  7. Hierarchical and Grouped Time Series 
+  7. Neural Network
+    - Neural Network
+    - RNN
 
 ## A. Simple Models
 
@@ -1639,36 +1608,16 @@ accuracy(mean_fc, gold)
 bestforecasts <- naive_fc
 ```
 
-### Moving Average SubModel
+### 2. NaÃ¯ve method
 
-A moving average model is used for forecasting future values, while moving average smoothing is used for estimating the trend-cycle of past values.
-
-2. plot of errors vs actual values
-3. compare models by AIC/BIC
-4. check mean, autocorrelation, normality of residuals. confirm if they are white noise.
-5. for multiple forecasts, plot the mean, p-value of autocorrelation test, and p-value of normality
-6. acf plot, pacf plot
-7. Durbin-Watson test, Box-Ljung test
-
-The residuals are uncorrelated. If there are correlations between residuals, then there is information left in the residuals which should be used in computing forecasts.
-The residuals have zero mean. If the residuals have a mean other than zero, then the forecasts are biased. Any forecasting method that does not satisfy these properties can be improved. However, that does not mean that forecasting methods that satisfy these properties cannot be improved. It is possible to have several different forecasting methods for the same data set, all of which satisfy these properties. Checking these properties is important in order to see whether a method is using all of the available information, but it is not a good way to select a forecasting method. If either of these properties is not satisfied, then the forecasting method can be modified to give better forecasts. Adjusting for bias is easy: if the residuals have mean  , then simply add to all forecasts and the bias problem is solved. Fixing the correlation problem is harder,
-
- it is useful (but not necessary) for the residuals to also have the following two properties.
-
-The residuals have constant variance.
-The residuals are normally distributed.
-These two properties make the calculation of prediction intervals easier 
-
-### 2. Naïve method
-
-For naïve forecasts, we simply set all forecasts to be the value of the last observation.
+For naÃ¯ve forecasts, we simply set all forecasts to be the value of the last observation.
 ```{r}
 naive(y, h)
 autoplot( )
 rwf(y, h) # Equivalent alternative
 ```
 
-### 3. Seasonal naïve method
+### 3. Seasonal naÃ¯ve method
 
 A similar method is useful for highly seasonal data. In this case, we set each forecast to be equal to the last observed value from the same season of the year (e.g., the same month of the previous year)
 ```{r}
@@ -1695,7 +1644,7 @@ accuracy(fc3, vn[, "Melbourne"])["Test set", "MAPE"]
 
 ### 4. Drift method
 
-A variation on the naïve method is to allow the forecasts to increase or decrease over time, where the amount of change over time (called the drift) is set to be the average change seen in the historical data.
+A variation on the naÃ¯ve method is to allow the forecasts to increase or decrease over time, where the amount of change over time (called the drift) is set to be the average change seen in the historical data.
 ```{r}
 rwf(y, h, drift=TRUE)
 ```
@@ -1708,9 +1657,9 @@ autoplot(beer2) +
   autolayer(meanf(beer2, h=11),
     series="Mean", PI=FALSE) +
   autolayer(naive(beer2, h=11),
-    series="Naïve", PI=FALSE) +
+    series="NaÃ¯ve", PI=FALSE) +
   autolayer(snaive(beer2, h=11),
-    series="Seasonal naïve", PI=FALSE) +
+    series="Seasonal naÃ¯ve", PI=FALSE) +
   ggtitle("Forecasts for quarterly beer production") +
   xlab("Year") + ylab("Megalitres") +
   guides(colour=guide_legend(title="Forecast"))
@@ -1721,7 +1670,7 @@ autoplot(goog200) +
   autolayer(meanf(goog200, h=40),
     series="Mean", PI=FALSE) +
   autolayer(rwf(goog200, h=40),
-    series="Naïve", PI=FALSE) +
+    series="NaÃ¯ve", PI=FALSE) +
   autolayer(rwf(goog200, drift=TRUE, h=40),
     series="Drift", PI=FALSE) +
   ggtitle("Google stock (daily ending 6 Dec 2013)") +
@@ -2177,6 +2126,26 @@ sarima(x, 2, 1, 0)
 The ACF and the PACF are both tailing off, implying an ARIMA(1,1,1) model.
 The ACF cuts off at lag 2, and the PACF is tailing off, implying an ARIMA(0,1,2) model.
 The ACF is tailing off and the PACF cuts off at lag 3, implying an ARIMA(3,1,0) model. Although this model fits reasonably well, it is the worst of the three (you can check it) because it uses too many parameters for such small autocorrelations.
+
+### Moving Average Submodel
+
+A moving average model is used for forecasting future values, while moving average smoothing is used for estimating the trend-cycle of past values.
+
+2. plot of errors vs actual values
+3. compare models by AIC/BIC
+4. check mean, autocorrelation, normality of residuals. confirm if they are white noise.
+5. for multiple forecasts, plot the mean, p-value of autocorrelation test, and p-value of normality
+6. acf plot, pacf plot
+7. Durbin-Watson test, Box-Ljung test
+
+The residuals are uncorrelated. If there are correlations between residuals, then there is information left in the residuals which should be used in computing forecasts.
+The residuals have zero mean. If the residuals have a mean other than zero, then the forecasts are biased. Any forecasting method that does not satisfy these properties can be improved. However, that does not mean that forecasting methods that satisfy these properties cannot be improved. It is possible to have several different forecasting methods for the same data set, all of which satisfy these properties. Checking these properties is important in order to see whether a method is using all of the available information, but it is not a good way to select a forecasting method. If either of these properties is not satisfied, then the forecasting method can be modified to give better forecasts. Adjusting for bias is easy: if the residuals have mean  , then simply add to all forecasts and the bias problem is solved. Fixing the correlation problem is harder,
+
+ it is useful (but not necessary) for the residuals to also have the following two properties.
+
+The residuals have constant variance.
+The residuals are normally distributed.
+These two properties make the calculation of prediction intervals easier 
 
 ### Checking Overfitting
 
@@ -3065,7 +3034,262 @@ chart.RollingPerformance(R = sp500ret["2000::2017"], width = 66,
      FUN = 'sd.annualized', scale = 252, main = "Three months rolling volatility")
 ```
 
-# VI. Forecasting Anomalies
+GARCH Parameters
+1. $\alpha + \beta < 1$ this ensures that the predicted variance $\sigma^2_{t}$ always returns to the long run variance
+
+ - the variance is therefore 'mean-reverting'
+ - the long run variane equals $\frac{\omega}{1-\alpha-\beta}$
+2. $\omega, \alpha, \beta$ are $ > 0$ : this ensures that $\sigma^2_{t}$ >0 at all times.
+
+GARCH(1,1) reaction to one-off shocks
+The GARCH approach models the variance using the prediction errors $e_{t}$ (also called shocks or unexpected returns). The parameter $\alpha$ determines the reactivity to $e^2_{t}$ , while $\beta$ is the weight on the previous variance prediction.
+
+
+The variance shoots up and then returns to $\frac{\omega}{1-\alpha-\beta}$. The higher the  $\alpha$  parameter, the more reactive the GARCH variance is to large unexpected returns.
+The larger is $\alpha$, the larger is the immediate impact of the shock.A large shock causes a spike in the variance. Afterwards, it returns to its long run value.
+Holding fixed $\alpha$, the larger is $\beta$, the longer is the duration of the impact.The higher the  $\beta$, the larger is the impact of the previous variance prediction on the next one.
+
+# VI. Model Selection and Evaluation
+
+After having engineered features, we can proceed to modeling time series. However, we should first determine which modeling selectiion strategy we should perform prior to modeling.
+
+There are three general strategies:
+
+  1. Training set fitness  
+  2. Evaluating on a holdout set
+
+## Fitness of Model
+
+We can evaluate fitness of model when data are small and examine the statistical assumptions
+
+First, we need to distinguish the Note that forecast errors are different from residuals in two ways. First, residuals are calculated on the training set while forecast errors are calculated on the test set. Second, residuals are based on one-step forecasts while forecast errors can involve multi-step forecasts.
+
+We want residuals to look like white noise:
+1. they should be uncorrelated
+2. have zero mean
+3. have constant variance
+4. are normally distributed 
+
+As long as they have zero mean point forecasts re okay. But when normality and autocorrelation are not satisfied, confidence intervals are not reliable
+
+## ASSumption Checks on Statistical Models
+
+### ACF of Residuals in Linear Regression
+Another useful test of autocorrelation in the residuals designed to take account for the regression model is the Breusch-Godfrey test, also referred to as the LM (Lagrange Multiplier) test for serial correlation. It is used to test the joint hypothesis that there is no autocorrelation in the residuals up to a certain specified order. A small p-value indicates there is significant autocorrelation remaining in the residuals.
+
+The Breusch-Godfrey test is similar to the Ljung-Box test, but it is specifically designed for use with regression models.
+```{r}
+checkresiduals(fit.consMR)
+```
+
+### Residual Plots for Linear Regression against Predictors
+Residual plots against predictors
+We would expect the residuals to be randomly scattered without showing any systematic patterns. A simple and quick way to check this is to examine scatterplots of the residuals against each of the predictor variables. If these scatterplots show a pattern, then the relationship may be nonlinear and the model will need to be modified accordingly. See Section 5.8 for a discussion of nonlinear regression.
+
+It is also necessary to plot the residuals against any predictors that are not in the model. If any of these show a pattern, then the corresponding predictor may need to be added to the model (possibly in a nonlinear form).
+```{r}
+df <- as.data.frame(uschange)
+df[,"Residuals"]  <- as.numeric(residuals(fit.consMR))
+p1 <- ggplot(df, aes(x=Income, y=Residuals)) +
+  geom_point()
+p2 <- ggplot(df, aes(x=Production, y=Residuals)) +
+  geom_point()
+p3 <- ggplot(df, aes(x=Savings, y=Residuals)) +
+  geom_point()
+p4 <- ggplot(df, aes(x=Unemployment, y=Residuals)) +
+  geom_point()
+gridExtra::grid.arrange(p1, p2, p3, p4, nrow=2)
+```
+
+### Residual Plots for Fitted Values
+
+A plot of the residuals against the fitted values should also show no pattern. If a pattern is observed, there may be "heteroscedasticity" in the errors which means that the variance of the residuals may not be constant. If this problem occurs, a transformation of the forecast variable such as a logarithm or square root may be required 
+```{r}
+cbind(Fitted = fitted(fit.consMR),
+      Residuals=residuals(fit.consMR)) %>%
+  as.data.frame() %>%
+  ggplot(aes(x=Fitted, y=Residuals)) + geom_point()
+```
+
+```{r}
+res <- residuals(naive(goog200))
+autoplot(res) + xlab("Day") + ylab("") +
+  ggtitle("Residuals from naÃ¯ve method")
+```
+
+```{r}
+gghistogram(res) + ggtitle("Histogram of residuals")
+ggAcf(res) + ggtitle("ACF of residuals")
+```
+
+```{r}
+checkresiduals(naive(goog200))
+```
+
+These graphs show that the naÃ¯ve method produces forecasts that appear to account for all available information. The mean of the residuals is close to zero and there is no significant correlation in the residuals series. The time plot of the residuals shows that the variation of the residuals stays much the same across the historical data, apart from the one outlier, and therefore the residual variance can be treated as constant. This can also be seen on the histogram of the residuals. The histogram suggests that the residuals may not be normal - the right tail seems a little too long, even when we ignore the outlier. Consequently, forecasts from this method will probably be quite good, but prediction intervals that are computed assuming a normal distribution may be inaccurate.
+
+### Autocorrelation Test
+```{r}
+# lag=h and fitdf=K
+Box.test(res, lag=10, fitdf=0)
+
+Box.test(res,lag=10, fitdf=0, type="Lj")
+```
+
+
+## Evaluating on a Holdout set
+
+###  Creating a Train-Test Set
+
+```{r}
+window(ausbeer, start=1995)
+subset(ausbeer, start=length(ausbeer)-4*5)
+
+subset(ausbeer, quarter = 1)
+tail(ausbeer, 4*5)
+```
+
+### Evaluation Metrics on Holdout Set
+
+1. Absolute errors
+  - Mean Absolute Errors
+  - MAPE
+2. Squared errors
+  - Mean Squared Errors
+  - R-squared
+  
+The two most commonly used scale-dependent measures are based on the absolute errors or squared errors
+When comparing forecast methods applied to a single time series, or to several time series with the same units, the MAE is popular as it is easy to both understand and compute. A forecast method that minimises the MAE will lead to forecasts of the median, while minimising the RMSE will lead to forecasts of the mean. Consequently, the RMSE is also widely used, despite being more difficult to interpret.
+
+Percentage errors have the advantage of being unit-free, and so are frequently used to compare forecast performances between data sets. 
+
+Another problem with percentage errors that is often overlooked is that they assume the unit of measurement has a meaningful zero.2 For example, a percentage error makes no sense when measuring the accuracy of temperature forecasts on either the Fahrenheit or Celsius scales, because temperature has an arbitrary zero point
+
+They also have the disadvantage that they put a heavier penalty on negative errors than on positive errors. This observation led to the use of the so-called "symmetric" MAPE (sMAPE)
+However, if  yt is close to zero,  ^yt is also likely to be close to zero. Thus, the measure still involves division by a number close to zero, making the calculation unstable. Also, the value of sMAPE can be negative, so it is not really a measure of "absolute percentage errors" at all.Hyndman & Koehler (2006) recommend that the sMAPE not be used. It is included here only because it is widely used, although we will not use it in this book.
+
+
+
+
+In data science, a training set is a data set that is used to discover possible relationships. A test set is a data set that is used to verify the strength of these potential relationships. When you separate a data set into these parts, you generally allocate more of the data for training, and less for testing.
+
+One function that can be used to create training and test sets is subset.ts(), which returns a subset of a time series where the optional start and end arguments are specified using index values.
+```{r}
+train <- window(oil, end=2003)
+test <- window(oil, start=2004)
+```
+
+## Evaluating Point Forecasts
+
+Forecast errors are errors on the test set while residuals are on train set. small residuals only means that the model fits the training data well, not that it produces good forecasts.
+
+Forecast accuracy measures: 
+
+1. Mean Absolute ERror
+2. Mean Squared Error
+3. Mean Absoslute Percentage Error: good for comparisons but only if data are all positive and have no zero or small values
+4. Mean Absolute Scaled Error: scaled error version of MAE
+
+## Time Series Cross-Validation
+
+Time series cross-validation: series of training and test sets. forecasting on rolling points.
+
+The tsCV() function computes time series cross-validation errors. It requires you to specify the time series, the forecast method, and the forecast horizon
+```{r}
+# Compute cross-validated errors for up to 8 steps ahead
+e <- tsCV(goog, forecastfunction = naive, h = 8)
+
+# Compute the MSE values and remove missing values
+mse <- colMeans(e^2, na.rm = T)
+
+# Plot the MSE values against the forecast horizon
+data.frame(h = 1:8, MSE = mse) %>%
+  ggplot(aes(x = h, y = MSE)) + geom_point()
+```
+
+## Feature Selection
+A common approach that is not recommended is to plot the forecast variable against a particular predictor and if there is no noticeable relationship, drop that predictor from the model. This is invalid because it is not always possible to see the relationship from a scatterplot, especially when the effects of other predictors have not been accounted for.
+
+Another common approach which is also invalid is to do a multiple linear regression on all the predictors and disregard all variables whose  
+p
+ -values are greater than 0.05. To start with, statistical significance does not always indicate predictive value. Even if forecasting is not the goal, this is not a good strategy because the  
+p
+ -values can be misleading when two or more predictors are correlated with each other
+ 
+```{r}
+# measure of predictive  
+CV(fit.consMR)
+``` 
+
+
+
+# VII. Forecasting and Inference
+
+## Confidence Interval
+```{r}
+ fit.cons <- tslm(Consumption ~ Income, data = uschange)
+h <- 4
+fcast.ave <- forecast(fit.cons,
+  newdata = data.frame(
+    Income = rep(mean(uschange[,"Income"]), h)))
+fcast.up <- forecast(fit.cons,
+  newdata = data.frame(Income = rep(5, h)))
+autoplot(uschange[, "Consumption"]) +
+  ylab("% change in US consumption") +
+  autolayer(fcast.ave, series = "Average increase",
+    PI = TRUE) +
+  autolayer(fcast.up, series = "Extreme increase",
+    PI = TRUE) +
+  guides(colour = guide_legend(title = "Scenario"))
+```
+
+### Confidence Interval using Bootstrapping
+```{r}
+bootseries <- bld.mbb.bootstrap(debitcards, 10) %>%
+  as.data.frame() %>% ts(start=2000, frequency=12)
+autoplot(debitcards) +
+  autolayer(bootseries, colour=TRUE) +
+  autolayer(debitcards, colour=FALSE) +
+  ylab("Bootstrapped series") + guides(colour="none")
+```
+
+we simulate many time series that are similar to the original data, using the block-bootstrap described above.
+```{r}
+nsim <- 1000L
+sim <- bld.mbb.bootstrap(debitcards, nsim)
+```
+
+For each of these series, we fit an ETS model and simulate one sample path from that model.
+```{r}
+h <- 36L
+future <- matrix(0, nrow=nsim, ncol=h)
+for(i in seq(nsim))
+  future[i,] <- simulate(ets(sim[[i]]), nsim=h)
+```
+
+Finally, we take the means and quantiles of these simulated sample paths to form point forecasts and prediction intervals.
+```{r}
+start <- tsp(debitcards)[2]+1/12
+simfc <- structure(list(
+    mean = ts(colMeans(future), start=start, frequency=12),
+    lower = ts(apply(future, 2, quantile, prob=0.025),
+               start=start, frequency=12),
+    upper = ts(apply(future, 2, quantile, prob=0.975),
+               start=start, frequency=12),
+    level=95),
+  class="forecast")
+```
+
+These prediction intervals will be larger than those obtained from an ETS model applied directly to the original data.
+```{r}
+etsfc <- forecast(ets(debitcards), h=h, level=95)
+autoplot(debitcards) +
+  ggtitle("Monthly retail debit card usage in Iceland") +
+  xlab("Year") + ylab("million ISK") +
+  autolayer(simfc, series="Simulated") +
+  autolayer(etsfc, series="ETS")
+```
+
 
 ## Interval Forecast
 A common problem is to forecast the aggregate of several time periods of data, using a model fitted to the disaggregated data. For example, we may have monthly data but wish to forecast the total for the next year. Or we may have weekly data, and want to forecast the total for the next four weeks.
